@@ -1,0 +1,501 @@
+---
+title: "Heart_failure_IB"
+author: Komarova Margarita
+output: html_document
+---
+
+This is R script to RNA-sequencing analysis of data from article DOI: 10.1161/JAHA.120.017091 using DESeq.
+
+This script has two parts:
+1. Comparison healthy donors (HD) and patients with heart failure (HF)
+2. Comparison two groups of patients: HF_1 and HF_2. The second group (HF_2) is characterized by a lower (almost critical) fraction compared to the first group (HF_1).
+
+
+```{r setup, include=FALSE, error=FALSE, warning=FALSE, message = FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+# Packages downloading
+
+require(DESeq2)
+require(dplyr)
+require(ggplot2)
+require(data.table)
+require(AnnotationDbi)
+require(fgsea)
+#install.packages('msigdbr')
+require(msigdbr)
+organism = 'org.Hs.eg.db'
+#install.packages('processx')
+require(devtools)
+#BiocManager::install("fgsea") 
+require(clusterProfiler)
+require(enrichplot)
+#BiocManager::install(organism, character.only = TRUE)
+require(organism, character.only = TRUE)
+require(DOSE)
+require(pheatmap)
+
+
+```
+
+
+### Counts table download.
+
+```{r, error=FALSE, warning=FALSE, message = FALSE}
+#setwd("C:/R/IB/Projects/Heart_failure_IB")
+data_HF <- read.table('Counts_Rmatrix.txt', sep = '\t', header = T, row.names=1)
+```
+
+### Experiment condition table download. Compare healthy donors (HD) and pations with chronic heart failure (HF).
+
+```{r, error=FALSE, warning=FALSE, message = FALSE}
+samples = names(data_HF)
+colData = read.table('Condition.txt', sep = '\t', header = T, row.names = 1)
+```
+
+### 1. DESeq2 analysis. Healthy donors (HD) vs pations with heart failure (HF).
+
+```{r, error=FALSE, warning=FALSE, message = FALSE}
+#library(DESeq2)
+
+dds = DESeqDataSetFromMatrix(countData=data_HF, colData=colData, design = ~Condition)
+```
+
+Compare patient with healthy donors.
+
+```{r, error=FALSE, warning=FALSE, message = FALSE}
+#Set the reference to be compared
+dds$Condition = relevel(dds$Condition,"HD")
+```
+
+Run DESeq2. 
+
+```{r, error=FALSE, warning=FALSE, message = FALSE}
+dds = DESeq(dds)
+
+# Results
+res = results(dds)
+res
+```
+
+Data sorting with p-adj and Log2FoldChange.
+
+```{r, error=FALSE, warning=FALSE, message = FALSE}
+sorted = res[with(res, order(padj, -log2FoldChange)), ]
+sorted_df <- data.frame("id"=rownames(sorted),sorted)
+sorted_df <- na.omit(sorted_df) 
+length(unique(sorted_df$id)) #24631 unique genes
+write.table(sorted_df$id, "sorted.txt", sep = "\t", row.names = F, col.names = F)
+```
+
+PCA plot of all samples (Figure 1).
+
+```{r, error=FALSE, warning=FALSE, message = FALSE}
+#PCA plot
+
+png("PCA_plot_HD_HF.png", 500, 500, pointsize=30)
+vst_dds <- vst(dds)
+counts.norm <- assay(vst_dds)
+PCA_plot <- plotPCA(vst_dds,intgroup= c("Condition"))
+PCA_plot
+dev.off()
+PCA_plot
+```
+
+Figure 1. PCA plot of sample distribution.
+
+There is a different between samples within the same group. 
+
+Volcanolot (Figure 2).
+
+```{r, error=FALSE, warning=FALSE, message = FALSE}
+#Volcano plot
+#library(ggplot2)
+gdata <- data.frame(
+  x=res$log2FoldChange,
+  y=-log10(res$pvalue)
+)
+png("Volcanoplot_HD_HF.png", 500, 500, pointsize=30)
+plot <- ggplot(data=gdata, aes(x=x, y=y, color = (res$padj<0.05) )) +
+  geom_point(size=1) + theme_bw()  +
+  xlab("Log fold change") +
+  ylab("Adjusted p.value")
+plot
+dev.off()
+plot
+```
+
+Figure 2. Volcanoplot of genes after DESeq2 analysis. Genes with padj<0.05 are marked in blue.
+
+There are only two differentially expressed genes: AMPD3 и LDHC.
+
+Next, was done signal pathway analysis using GO analysis.
+
+GO analysis on stat variable.  
+
+```{r, error=FALSE, warning=FALSE, message = FALSE}
+#library(data.table)
+#library(AnnotationDbi)
+sorted_df <- as.data.table(sorted_df)
+p_adj_below_0.05_HD_HF <- sorted_df %>% filter(sorted_df$padj < 0.05 & abs(sorted_df$log2FoldChange)>1)
+sorted_df$id <- as.character(sorted_df$id)
+sorted_df[, row_Genes := mapIds(org.Hs.eg.db, keys=id, 
+                                        keytype="SYMBOL", column="ENTREZID")]
+# You can saw "keyType" list by "keytypes(org.Hs.eg.db)" command.
+
+sorted_df <- unique(sorted_df, by = "row_Genes")
+sorted_df <- na.omit(sorted_df)
+original_gene_list1 <- sorted_df$stat
+names(original_gene_list1) <- sorted_df$row_Genes
+gene_list1 <- na.omit(original_gene_list1)
+gene_list1 <- sort(gene_list1, decreasing = TRUE)
+gse <- gseGO(geneList=gene_list1, 
+             ont ="BP", 
+             keyType = "ENTREZID", 
+             nPerm = 10000, 
+             minGSSize = 10, 
+             maxGSSize = 500, 
+             pvalueCutoff = 0.05, 
+             verbose = FALSE, 
+             OrgDb = org.Hs.eg.db, 
+             pAdjustMethod = "BH")
+```
+
+Number of up и down regulated signal pathways:
+
+```{r, error=FALSE, warning=FALSE, message = FALSE}
+gse_res <- gse@result
+gse_down <- gse_res %>% filter(gse_res$NES < 0) #114 down pathways
+gse_up <- gse_res %>% filter(gse_res$NES > 0) #156 up pathways
+nrow(gse_down)
+nrow(gse_up)
+```
+
+There are 114 down regulated and 156 up regulated pathways.
+
+GO analysis visualization. Dotplot graph (Figure 3).
+
+```{r, error=FALSE, warning=FALSE, message = FALSE}
+require(DOSE)
+png("GO_1.png", 1500, 1000)
+GO_plot <- dotplot(gse, showCategory=20, split=".sign") + facet_grid(.~.sign)
+GO_plot
+dev.off()
+GO_plot
+```
+
+Figure 3. Dotplot of Go analysis. HD vs HF.
+
+FGSEA analysis (Figure 4 and 5).
+
+```{r, error=FALSE, warning=FALSE, message = FALSE}
+m_df_stats <- msigdbr(species = "Homo sapiens", category = "C5", subcategory = "BP")
+pathways_stats <- split(m_df_stats$entrez_gene, m_df_stats$gs_name)
+fgseaRes_stats <- fgsea(pathways = pathways_stats, 
+                  stats    = gene_list1,
+                  nperm = 100000, 
+                  nproc=4,
+                  minSize  = 15,
+                  maxSize  = 500)
+
+topPathwaysUp1_stats <- fgseaRes_stats[ES > 0 & padj < 0.05][head(order(padj), n=20), pathway]
+topPathwaysDown1_stats <- fgseaRes_stats[ES < 0 & padj < 0.05][head(order(padj),n=20), pathway]
+topPathways1_stats <- c(topPathwaysUp1_stats, rev(topPathwaysDown1_stats))
+
+```
+
+```{r, error=FALSE, warning=FALSE, message = FALSE}
+png("FGSEA_1.png", 2500, 1000)
+FGSEA_plot <- plotGseaTable(pathways_stats[topPathways1_stats], gene_list1, fgseaRes_stats, gseaParam=0.5)
+FGSEA_plot
+dev.off()
+FGSEA_plot
+```
+
+Figure 4. FGSEA result visualization. The first 20 up and down regulated signal pathways. 
+
+The other way to FGSEA analysis visualization. 
+The first 20 up and down regulated signal pathways. 
+
+```{r, error=FALSE, warning=FALSE, message = FALSE}
+fgseaRes_up1 <- fgseaRes_stats[ES > 0 & padj < 0.05][head(order(padj,decreasing = FALSE), n=20),]
+fgseaRes_down1 <- fgseaRes_stats[ES < 0 & padj < 0.05][head(order(padj,decreasing = FALSE), n=20),]
+fgseaRes_up_down1 <- rbind(fgseaRes_up1, fgseaRes_down1)
+```
+
+
+```{r, error=FALSE, warning=FALSE, message = FALSE}
+png("FGSEA_2.png", 1500, 1000)
+FGSEA_plot2 <- ggplot(fgseaRes_up_down1, aes(reorder(pathway, NES), NES)) +
+  geom_col(aes(fill=padj<0.05)) +
+  coord_flip() +
+  labs(x="Pathway", y="Normalized Enrichment Score",
+       title="Hallmark pathways NES from GSEA. HD vs HF") + 
+  theme_minimal()
+FGSEA_plot2
+dev.off()
+FGSEA_plot2
+```
+
+Figure 5. Hallmark pathways NES from GSEA. HD vs HF. 
+
+In both cases, we got the same up and down regulated signal pathways in patients with heart failure.The pathways that control cellular respiration and protein localisation were downregulated in patients. Comparison of healthy donors and patients from our laboratory with fgsea gave many DEGs and slightly different corresponding signaling pathways. This can be explained by the not very good choice of the control group in the article and by another muscle.
+
+
+# 2. Compare heart failure patient group.
+
+From PCA plot (Figure 1) we can see heart failure patient division into two groups.Based on the data of the article, the reason for this division was identified. Patients were statistically significantly different in their left ventricular ejection fraction. Further, signaling pathways were analyzed for these two subgroups. The second group (HF_2) of patients has a lower left ventricular ejection fraction.
+
+```{r, error=FALSE, warning=FALSE, message = FALSE}
+#samples2 <- names(data_HF[,4:9])
+colData2 <- read.table('Conditions2.txt', sep = '\t', header = T, row.names = 1)
+list <- rownames(colData2)
+data_HF2 <- data_HF[,list]
+data_HF2 <- data_HF2[, c("X3671309", "X3671311", "X3671312", "X3671310", "X3671313", "X3671314")] #swapped columns 
+```
+
+
+```{r, error=FALSE, warning=FALSE, message = FALSE}
+dds2 = DESeqDataSetFromMatrix(countData=data_HF2, colData=colData2, design = ~Condition)
+dds2$Condition = relevel(dds2$Condition,"HF_1")
+# Run DESeq
+dds2 = DESeq(dds2)
+
+# Format the results.
+res2 = results(dds2)
+res2
+```
+
+```{r, error=FALSE, warning=FALSE, message = FALSE}
+sorted2 <- res2[with(res2, order(padj, -log2FoldChange)), ]
+sorted_df2 <- data.frame("id"=rownames(sorted2),sorted2)
+sorted_df2 <- unique(sorted_df2)
+sorted_df2 <- na.omit(sorted_df2)
+p_adj_below_0.05_HF_HF <- sorted_df2 %>% filter(sorted_df2$padj < 0.05 & abs(sorted_df2$log2FoldChange)>1)
+
+length(unique(sorted_df2$id)) #15271 unique genes
+```
+
+PCA plot of two group of patient (Figure 6).
+
+```{r, error=FALSE, warning=FALSE, message = FALSE}
+
+png("PCA_plot.png", 500, 500, pointsize=30)
+vst_dds2 <- vst(dds2)
+counts.norm <- assay(vst_dds2)
+PCA_plot2 <- plotPCA(vst_dds2,intgroup= c("Condition"))
+PCA_plot2
+dev.off()
+PCA_plot2
+```
+
+Figure 6. PCA plot of two group of patient.
+
+Volcano plot of two groups of patient (Figure 7).
+
+```{r, error=FALSE, warning=FALSE, message = FALSE}
+
+gdata2 <- data.frame(
+  x=sorted_df2$log2FoldChange,
+  y=-log10(sorted_df2$pvalue)
+)
+png("Volcanoplot_HF_HF.png", 700, 500, pointsize=30)
+volcano_HF <- ggplot(data=gdata2, aes(x=x, y=y, color = (sorted_df2$padj<0.05 & abs(sorted_df2$log2FoldChange)>1) )) +
+  geom_point(size=1) + theme_bw()  +
+  xlab("Log fold change") +
+  ylab("Adjusted p.value")
+volcano_HF
+dev.off()
+volcano_HF
+```
+
+Figure 7. Volcanoplot of genes of two groups of patient.
+
+There are a lot of differentially expressed genes. 
+In second group of patient (with lower left ventricular ejection fraction) are more genes with negative Log fold change, it means that genes are more expressed in the first patient group. 
+
+Heatmap of differentially expressed genes. 
+
+```{r, error=FALSE, warning=FALSE, message = FALSE}
+#library("pheatmap")
+select2 <- order(rowMeans(counts(dds2,normalized=TRUE)),
+                decreasing=TRUE)[1:50]
+ntd2 <- normTransform(dds2)
+df2 <- as.data.frame(colData(dds2)[, 2])
+rownames(df2) <- colnames(ntd2)
+
+pdf('Heatmap2.pdf')
+pheatmap(assay(ntd2)[select2,], cluster_rows=FALSE, show_rownames=FALSE,
+         cluster_cols=FALSE, annotation_col=df2)
+invisible(dev.off())
+```
+
+
+GO analysis. 
+
+```{r, error=FALSE, warning=FALSE, message = FALSE}
+sorted_df2 <- as.data.table(sorted_df2)
+sorted_df2$id <- as.character(sorted_df2$id)
+sorted_df2[, row_Genes := mapIds(org.Hs.eg.db, keys=id, 
+                                        keytype="SYMBOL", column="ENTREZID")]
+original_gene_list2 <- sorted_df2$stat
+names(original_gene_list2) <- sorted_df2$row_Genes
+gene_list2<-na.omit(original_gene_list2)
+gene_list2 = sort(gene_list2, decreasing = TRUE)
+gse2 <- gseGO(geneList=gene_list2, 
+             ont ="BP", 
+             keyType = "ENTREZID", 
+             nPerm = 10000, 
+             minGSSize = 50, 
+             maxGSSize = 500, 
+             pvalueCutoff = 0.05, 
+             verbose = FALSE, 
+             OrgDb = org.Hs.eg.db, 
+             pAdjustMethod = "BH")
+```
+
+```{r, error=FALSE, warning=FALSE, message = FALSE}
+gse2_result <- gse2@result
+gse2_down <- gse2_result %>% filter(gse2_result$NES < 0) #31 pathways
+nrow(gse2_down)
+gse2_up <- gse2_result %>% filter(gse2_result$NES > 0) #927 pathways
+nrow(gse2_up)
+```
+
+There are 32 down regulated and 975 up regulated pathways. 
+
+Dotplot graph (Figure 8).
+
+```{r, error=FALSE, warning=FALSE, message = FALSE}
+#require(DOSE)
+png("GO_2.png", 1000, 1000)
+GO_plot2 <- dotplot(gse2, showCategory=30, split=".sign") + facet_grid(.~.sign)
+GO_plot2
+dev.off()
+GO_plot2
+```
+
+Figure 8. Dotplot graph of GO analysis. HF_1 group vs HF_2 group. 
+
+FGSEA analysis for two groups of patient.
+
+```{r, error=FALSE, warning=FALSE, message = FALSE}
+#library(fgsea)
+#install.packages('msigdbr')
+#library(msigdbr)
+m_df2 <- msigdbr(species = "Homo sapiens", category = "C5", subcategory = "BP")
+pathways2 <- split(m_df2$entrez_gene, m_df2$gs_name)
+fgseaRes2 <- fgsea(pathways = pathways2, 
+                  stats    = gene_list2,
+                  nperm = 100000, 
+                  nproc=4,
+                  minSize  = 15,
+                  maxSize  = 500)
+```
+
+
+```{r, error=FALSE, warning=FALSE, message = FALSE}
+fgseaRes2[order(padj)]
+```
+
+```{r, error=FALSE, warning=FALSE}
+topPathwaysUp2 <- fgseaRes2[ES > 0 & padj < 0.05][head(order(padj), n=20), pathway]
+topPathwaysDown2 <- fgseaRes2[ES < 0 & padj < 0.05][head(order(padj), n=20), pathway]
+topPathways2 <- c(topPathwaysUp2, rev(topPathwaysDown2))
+png("FGSEA1_HF.png", 1500, 1000)
+FGSEA1_HF <- plotGseaTable(pathways2[topPathways2], gene_list2, fgseaRes2, 
+              gseaParam=0.5)
+FGSEA1_HF
+dev.off()
+FGSEA1_HF
+```
+
+Figure 9. The first 20 up and down regulated signal pathways. HF1_1 vs HF_2 group.
+
+```{r, error=FALSE, warning=FALSE, message = FALSE}
+fgseaRes_up2 <- fgseaRes2[ES > 0 & padj < 0.05][head(order(padj,decreasing = FALSE), n=20),]
+fgseaRes_down2 <- fgseaRes2[ES < 0 & padj < 0.05][head(order(padj,decreasing = FALSE),n=20),]
+fgseaRes_up_down2 <- rbind(fgseaRes_up2, fgseaRes_down2)
+png("FGSEA_2_HF.png", 1500, 1000)
+FGSEA_2_HF_plot <- ggplot(fgseaRes_up_down2, aes(reorder(pathway, NES), NES)) +
+  geom_col(aes(fill=padj<0.05)) +
+  coord_flip() +
+  labs(x="Pathway", y="Normalized Enrichment Score",
+       title="Hallmark pathways NES from GSEA. HF_1 vs HF_2") + 
+  theme_minimal()
+FGSEA_2_HF_plot
+dev.off()
+FGSEA_2_HF_plot
+```
+
+Figure 10. Hallmark pathways NES from GSEA. HF_1 vs HF_2. 
+
+EnrichGO analysis on differentially expressed genes in two groups of patient. 
+Now let's perform EnrichGO analysis for up and down regulated signal pathways separately. 
+
+For DEG with Log2FoldChange<0:
+
+```{r, error=FALSE, warning=FALSE, message = FALSE}
+down_DEG <- sorted_df2 %>% filter(sorted_df2$padj < 0.05 & abs(sorted_df2$log2FoldChange)>1)
+down_DEG <- down_DEG %>% filter(down_DEG$log2FoldChange < 0)
+down_DEG <- as.data.table(down_DEG)
+nrow(down_DEG)
+yy_down_DEG <- enrichGO(down_DEG$row_Genes, 'org.Hs.eg.db', ont="BP", pvalueCutoff=0.05)
+
+
+png("EnrichGO_HF_down.png", 500, 500)
+enrich_down <- dotplot(yy_down_DEG, showCategory=30)
+enrich_down
+dev.off()
+enrich_down
+```
+
+Figure 11. Dotplot of signal pathways for DEG with Log2FoldChange<0. HF_1 vs HF_2.
+
+```{r, error=FALSE, warning=FALSE, message = FALSE}
+barplot(yy_down_DEG, showCategory=8)
+```
+
+Figure 12. Barplot of signal pathways for DEG with Log2FoldChange<0. HF_1 vs HF_2.
+
+Graph of signal pathways for DEG with Log2FoldChange<0. HF_1 vs HF_2.
+
+```{r, error=FALSE, warning=FALSE, message = FALSE}
+pdf('Graph_down.pdf')
+plotGOgraph(yy_down_DEG) 
+invisible(dev.off())
+```
+
+EnrichGO for DEG with Log2FoldChange>0:
+
+```{r, error=FALSE, warning=FALSE, message = FALSE}
+up_DEG <- sorted_df2 %>% filter(sorted_df2$padj < 0.05 & abs(sorted_df2$log2FoldChange)>1)
+up_DEG <- up_DEG %>% filter(up_DEG$log2FoldChange > 0)
+up_DEG <- as.data.table(up_DEG)
+nrow(up_DEG)
+yy_up_DEG <- enrichGO(up_DEG$row_Genes, 'org.Hs.eg.db', ont="BP", pvalueCutoff=0.05)
+
+
+png("EnrichGO_HF_up.png", 500, 500)
+enrich_up <- dotplot(yy_up_DEG, showCategory=10)
+enrich_up
+dev.off()
+enrich_up
+```
+
+Figure 13. Dotplot of signal pathways for DEG with Log2FoldChange>0. HF_1 vs HF_2.
+
+
+```{r, error=FALSE, warning=FALSE, message = FALSE}
+barplot(yy_up_DEG, showCategory=8)
+```
+
+Figure 14. Barplot of signal pathways for DEG with Log2FoldChange>0. HF_1 vs HF_2.
+
+Graph of signal pathways for DEG with Log2FoldChange>0. HF_1 vs HF_2.
+
+```{r, error=FALSE, warning=FALSE, message = FALSE}
+pdf('Graph_up.pdf')
+plotGOgraph(yy_up_DEG) 
+invisible(dev.off())
+```
+
