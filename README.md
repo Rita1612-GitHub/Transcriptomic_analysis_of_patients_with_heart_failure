@@ -1,0 +1,2 @@
+# Transcriptomic_analysis_of_patients_with_heart_failure
+This is spring project in Bioinformatic Institute 2021
