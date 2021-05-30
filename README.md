@@ -56,8 +56,30 @@ Differentially expressed genes were determined using a DESeq package in R with p
 ## Results
 We reprocessed RNA-seq data from the article and got just two differentially expressed genes (DEG). 
 
-![Figure 1](Transcriptomic_analysis_of_patients_with_heart_failure/Pictures/Volcanoplot_HD_HF.png)
+![Figure 1](https://github.com/Rita1612-GitHub/Transcriptomic_analysis_of_patients_with_heart_failure/blob/main/Pictures/Volcanoplot_HD_HF.png)
 
-Due to the small number of DEG, only analysis of the functional groups of genes was performed. We used the gseGO and fgsea functions from clusterProfiler library in R. In both cases, we got the same up and down regulated signal pathways in patients with heart failure.The pathways that control cellular respiration and protein localisation were downregulated in patients. Comparison of healthy donors and patients from our laboratory with fgsea gave many DEGs and slightly different corresponding signaling pathways. This can be explained by the not very good choice of the control group in the article and by another muscle.
-PCA graph shows that the patients in the article are divided into two groups according to the first component. We have found that this is influenced by the left ventricular ejection fraction. The second group (HF_2) is characterized by a lower (almost critical) fraction compared to the first group (HF_1). In this case we also did GO analysis, FGSEA analysis and enrichment analysis on DEG. We identified more differentially expressed genes when comparing healthy donors and patients. Using GO analysis and FGSEA we found that left ventricular ejection fraction has an effect on RNA splicing, various metabolic pathways, immune response, cell adhesion and muscle contraction. Most of the signal pathways in HF_2 were downregulated. They included RNA splicing and cilium organization. 
+Due to the small number of DEG, only analysis of the functional groups of genes was performed. We used the gseGO and fgsea functions from clusterProfiler library in R. 
+![Figure_2](https://github.com/Rita1612-GitHub/Transcriptomic_analysis_of_patients_with_heart_failure/blob/main/Pictures/GO_1.png)
+In both cases, we got the same up and down regulated signal pathways in patients with heart failure. 
+![Figure_3](https://github.com/Rita1612-GitHub/Transcriptomic_analysis_of_patients_with_heart_failure/blob/main/Pictures/FGSEA_1.png)
+![Figure_4](https://github.com/Rita1612-GitHub/Transcriptomic_analysis_of_patients_with_heart_failure/blob/main/Pictures/FGSEA_2.png)
+The pathways that control cellular respiration and protein localisation were downregulated in patients. 
+Comparison of healthy donors and patients from our laboratory with fgsea gave many DEGs and slightly different corresponding signaling pathways. This can be explained by the not very good choice of the control group in the article and by another muscle.
+
+PCA graph shows that the patients in the article are divided into two groups according to the first component. 
+![Figure_5](https://github.com/Rita1612-GitHub/Transcriptomic_analysis_of_patients_with_heart_failure/blob/main/Pictures/PCA_plot_HD_HF.png)
+![Figure_6](https://github.com/Rita1612-GitHub/Transcriptomic_analysis_of_patients_with_heart_failure/blob/main/Pictures/PCA_plot.png)
+We have found that this is influenced by the left ventricular ejection fraction. The second group (HF_2) is characterized by a lower (almost critical) fraction compared to the first group (HF_1). In this case we also did GO analysis, FGSEA analysis and enrichment analysis on DEG. 
+We identified more differentially expressed genes when comparing healthy donors and patients. 
+![Figure_7](https://github.com/Rita1612-GitHub/Transcriptomic_analysis_of_patients_with_heart_failure/blob/main/Pictures/Volcanoplot_HF_HF.png)
+Using GO analysis and FGSEA we found that left ventricular ejection fraction has an effect on RNA splicing, various metabolic pathways, immune response, cell adhesion and muscle contraction. Most of the signal pathways in HF_2 were downregulated. They included RNA splicing and cilium organization. 
+![Figure_8](https://github.com/Rita1612-GitHub/Transcriptomic_analysis_of_patients_with_heart_failure/blob/main/Pictures/GO_2.png)
+![Figure_9](https://github.com/Rita1612-GitHub/Transcriptomic_analysis_of_patients_with_heart_failure/blob/main/Pictures/FGSEA1_HF.png)
+![Figure_10](https://github.com/Rita1612-GitHub/Transcriptomic_analysis_of_patients_with_heart_failure/blob/main/Pictures/FGSEA_2_HF.png)
+Also, we have performed enrichment analysis on down and up regulated DEG. 
+For DEG with Log2FoldChange<0:
+
+For DEG with Log2FoldChange<0:
+![Figure_13](https://github.com/Rita1612-GitHub/Transcriptomic_analysis_of_patients_with_heart_failure/blob/main/Pictures/EnrichGO_HF_up.png)
+![Figure_14](
 Thus, in the present work we have shown that the left ventricular ejection fraction has a key influence on the development of skeletal muscle atrophy in heart failure. 
