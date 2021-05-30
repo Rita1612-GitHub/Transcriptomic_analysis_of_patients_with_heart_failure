@@ -1,0 +1,7 @@
+Name	Condition	Replicate
+X3671309	HF_1	rep1
+X3671311	HF_1	rep2
+X3671312	HF_1	rep3
+X3671310	HF_2	rep4
+X3671313	HF_2	rep5
+X3671314	HF_2	rep6
