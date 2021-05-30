@@ -78,8 +78,8 @@ Using GO analysis and FGSEA we found that left ventricular ejection fraction has
 ![Figure_10](https://github.com/Rita1612-GitHub/Transcriptomic_analysis_of_patients_with_heart_failure/blob/main/Pictures/FGSEA_2_HF.png)
 Also, we have performed enrichment analysis on down and up regulated DEG. 
 For DEG with Log2FoldChange<0:
-
+![Figure_11](https://github.com/Rita1612-GitHub/Transcriptomic_analysis_of_patients_with_heart_failure/blob/main/Pictures/EnrichGO_HF_down.png)
 For DEG with Log2FoldChange<0:
-![Figure_13](https://github.com/Rita1612-GitHub/Transcriptomic_analysis_of_patients_with_heart_failure/blob/main/Pictures/EnrichGO_HF_up.png)
-![Figure_14](
+![Figure_12](https://github.com/Rita1612-GitHub/Transcriptomic_analysis_of_patients_with_heart_failure/blob/main/Pictures/EnrichGO_HF_up.png)
+
 Thus, in the present work we have shown that the left ventricular ejection fraction has a key influence on the development of skeletal muscle atrophy in heart failure. 
