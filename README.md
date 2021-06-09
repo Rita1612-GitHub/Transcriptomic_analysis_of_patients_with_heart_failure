@@ -21,6 +21,8 @@ This project has two parts:
 1. Comparison healthy donors (HD) and patients with heart failure (HF). Data from article.
 2. Comparison two groups of patients: HF_1 and HF_2. The second group (HF_2) is characterized by a lower (almost critical) left ventricular ejection fraction compared to the first group (HF_1).
 
+R script is in the HF_IB.Rmd, HF_IB.md and HF_IB.html files.
+
 ## The first step of all piplines was quality assessment of reads using FastQC program (https://www.bioinformatics.babraham.ac.uk/projects/fastqc/).
 
 Reads of this article were posted in open access and are available via the link https://www.ebi.ac.uk/arrayexpress/experiments/E-MTAB-8531/samples/. The reads have of high quality and do not need trimming procedure.
