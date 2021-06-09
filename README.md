@@ -3,13 +3,16 @@ This is spring project in Bioinformatic Institute 2021
 
 Author: Komarova Margarita
 
-In heart failure (HF), functional and metabolic alterations are detected not only in cardiac muscle but also in skeletal muscle tissue. In our laboratory based on Almazov National Medical Research Centre we have done transcriptomic analysis of calf muscle of healthy donors and patients with heart failure. Then we have found the other article (DOI: 10.1161/JAHA.120.017091) where transcriptome analysis of the pectoral muscle was also performed. 
+In heart failure (HF), functional and metabolic alterations are detected not only in cardiac muscle but also in skeletal muscle tissue. In our laboratory based on Almazov National Medical Research Centre we have done transcriptomic analysis of calf muscle of healthy donors and patients with heart failure. Then we have found the other article (Talia Caspi et al. Unique Transcriptome Signature Distinguishes Patients With Heart Failure With Myopathy. 
+Journal of the American Heart Association, 2020. DOI: 10.1161/JAHA.120.017091) where transcriptome analysis of the pectoral muscle was also performed. 
+
 **Aim**
+
 The aim of this project was to investigate the muscle transcriptome of patients with heart failure in an article and compare these results with the same experiment performed in our laboratory.
 
 ## Methods:
 - FastQC (v0.11.9)
-- STAR (v2.7.3a) alignment
+- STAR (v2.7.9a) alignment
 - featureCounts (v2.0.1) (getting counts table)
 - DESeq2 (v1.26.0) (gene expression analysis in Rstudio)
 - also we use fgsea (v1.12.0) and ClusterProfiler (v3.14.3) packages to identify signal pathways. 
@@ -22,19 +25,33 @@ This project has two parts:
 
 Reads of this article were posted in open access and are available via the link https://www.ebi.ac.uk/arrayexpress/experiments/E-MTAB-8531/samples/. The reads have of high quality and do not need trimming procedure.
 
-## At the next step, the genome was indexed in the STAR program. Example of command for this step:
+## At the next step, the genome was indexed in the STAR program. 
+STAR installing:
+
 ```
-/home/tools/STAR-2.7.3a/bin/Linux_x86_64/STAR --runThreadN 10 --runMode genomeGenerate --genomeDir /mnt4/transciptome_compare/komarova/STAR_genome_index --genomeFastaFiles /mnt4/transciptome_compare/komarova/GCF_000001405.39_GRCh38.p13_genomic.fna --sjdbGTFfile /mnt4/transciptome_compare/komarova/GCF_000001405.39_GRCh38.p13_genomic.gtf --sjdbOverhang 75 
+wget https://github.com/alexdobin/STAR/archive/2.7.9a.tar.gz
+tar -xzf 2.7.9a.tar.gz
+cd STAR-2.7.9a
+```
+Other installing steps are described in https://github.com/alexdobin/STAR
+
+Homo sapiens (assembly GRCh38.p13): https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/001/405/GCF_000001405.39_GRCh38.p13/GCF_000001405.39_GRCh38.p13_genomic.fna.gz
+Annotation (RefSeq): https://ftp.ncbi.nlm.nih.gov/genomes/refseq/vertebrate_mammalian/Homo_sapiens/latest_assembly_versions/GCF_000001405.39_GRCh38.p13/GCF_000001405.39_GRCh38.p13_genomic.gtf.gz
+
+STAR running:
+
+```
+STAR-2.7.9a --runThreadN 10 --runMode genomeGenerate --genomeDir ~/STAR_genome_index --genomeFastaFiles ~/GCF_000001405.39_GRCh38.p13_genomic.fna --sjdbGTFfile ~/GCF_000001405.39_GRCh38.p13_genomic.gtf --sjdbOverhang 75 
 ```
 
 ## Then you need to align the reads to the genome
 ```
-/home/tools/STAR-2.7.3a/bin/Linux_x86_64/STAR --genomeDir /mnt4/transciptome_compare/komarova/STAR_genome_index/ --runThreadN 10 --readFilesIn /mnt4/transciptome_compare/komarova/ERR3671306.fastq --outFileNamePrefix /mnt4/transciptome_compare/komarova/STAR_alignment/3671306 --outSAMtype BAM SortedByCoordinate --outSAMunmapped Within --outSAMattributes Standard
+STAR-2.7.9a --genomeDir ~/STAR_genome_index/ --runThreadN 10 --readFilesIn ~/READS.fastq --outFileNamePrefix ~/STAR_alignment/3671306 --outSAMtype BAM SortedByCoordinate --outSAMunmapped Within --outSAMattributes Standard
 ```
 ## Counts table
-After STAR, counts are obtained in files with .tab resolution and aligned reads in .out.bam. But it is better to run featureCount to calculate counts.
+After STAR, counts are obtained in files with .tab resolution and aligned reads in .out.bam. But it is better to run featureCount to calculate counts. Download featureCounts: https://sourceforge.net/projects/subread/files/subread-2.0.0/
 ```
-/home/tools/subread-2.0.1-source/bin/featureCounts -T 4 -s 0 -a /mnt4/transciptome_compare/komarova/GCF_000001405.39_GRCh38.p13_genomic.gtf -o /mnt4/transciptome_compare/komarova/STAR_alignment/featureCount_results/Counts.txt /mnt4/transciptome_compare/komarova/STAR_alignment/*.out.bam
+~/bin/featureCounts -T 4 -s 0 -a ~/GCF_000001405.39_GRCh38.p13_genomic.gtf -o ~/STAR_alignment/featureCount_results/Counts.txt ~/STAR_alignment/*.out.bam
 ```
 Where is:
 - -T number of cores
@@ -45,7 +62,7 @@ Where is:
 ## "Cleaning" of output file
 Unnecessary columns need to be removed.
 ```
-cut -f1,7-18 /mnt4/transciptome_compare/komarova/STAR_alignment/featureCount_results/Counts.txt > /mnt4/transciptome_compare/komarova/STAR_alignment/featureCount_results/Counts_Rmatrix.txt
+cut -f1,7-18 ~/STAR_alignment/featureCount_results/Counts.txt > ~/STAR_alignment/featureCount_results/Counts_Rmatrix.txt
 ```
 
 ## DESeq2 analysis
