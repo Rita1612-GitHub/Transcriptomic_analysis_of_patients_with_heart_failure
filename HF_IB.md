@@ -2,8 +2,7 @@ Heart\_failure\_IB
 ================
 Komarova Margarita
 
-This is R script to RNA-sequencing analysis of data from article DOI:
-10.1161/JAHA.120.017091 using DESeq.
+This is R script to RNA-sequencing analysis of data from article Talia Caspi et al. Unique Transcriptome Signature Distinguishes Patients With Heart Failure With Myopathy. Journal of the American Heart Association, 2020. DOI: 10.1161/JAHA.120.017091
 
 This script has two parts: 1. Comparison healthy donors (HD) and
 patients with heart failure (HF) 2. Comparison two groups of patients:
